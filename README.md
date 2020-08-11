@@ -1,16 +1,18 @@
-# frictions
-GAZ-71 gear Frictions controller for electric actuators (Bringsmart 1500N 20mm/s 50mm).  Tourning of ATV is controlled with switches or resistive joystick. 
-This system designed for 4x4 big tires side-turning ATV like SHERP.
+GAZ-71 gear Frictions 2-channel controller for 4x4 big tires side-turning ATV like SHERP.
 
-**vksensor ATV Frictions controller G2.3**
+Used two electric actuators (Bringsmart 1500N 20mm/s 50mm).  Tourning of ATV is controlled with switches or resistive joystick. 
+
+
+**vksensor ATV GAZ-71 Frictions controller v2.3**
 ![Image alt](https://github.com/vkshardware/frictions/blob/master/main_view.jpg)
 
 Sources is open and available here
-
+**disp_i2c** - display board firmware in Atmel Studio 7
+**frictions** - main power board in Atmel Strudio 7
 
 ****
 
-Mount electric actuators like this: 
+Electric line actuators mounted like this: 
 
 
 ![Image alt](https://github.com/vkshardware/frictions/blob/master/mount_actuators.jpg)
@@ -18,7 +20,7 @@ Mount electric actuators like this:
 
 ****
 
-Pinout of controlled
+Pinout of 2-channel controller (RU)
 
 ![Image alt](https://github.com/vkshardware/frictions/blob/master/pinout.jpg)
 
