@@ -7,8 +7,12 @@ Used two electric actuators (Bringsmart 1500N 20mm/s 50mm).  Tourning of ATV is 
 ![Image alt](https://github.com/vkshardware/frictions/blob/master/main_view.jpg)
 
 Sources is open and available here
-**disp_i2c** - display board firmware in Atmel Studio 7
-**frictions** - main power board in Atmel Strudio 7
+
+
+**disp_i2c** - display board. Atmega8A firmware in Atmel Studio 7
+
+**frictions** - main power board. Atmega328PA firmware in Atmel Strudio 7
+
 
 ****
 
