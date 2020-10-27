@@ -1,8 +1,13 @@
-**vksensor ATV GAZ-71 Frictions controller v2.3**
+**vksensor ATV GAZ-71 Friction Clutches controller v2.3**
 
-GAZ-71 gear Frictions 2-channel controller for 4x4 big tires side-turning ATV like SHERP.
+GAZ-71 gear Friction Clutches 2-channel controller for 4x4 big tires side-turning ATV like SHERP.
 
-Used two electric actuators (Bringsmart 1500N 20mm/s 50mm).  Tourning of ATV is controlled with switches or resistive joystick. 
+Used two electric actuators (Bringsmart 1500N 20mm/s 50mm or Sumotor 1000N 30mm/s 50mm).  
+
+Tourning of ATV is controlled with switches or resistive joystick. 
+
+**Manual_EN rev1.1.pdf**  - English manual rev 1.1
+**manual_v2_2_RU.pdf**  -   Russian manual  rev 1.0
 
 
 ![Image alt](https://github.com/vkshardware/frictions/blob/master/main_view.jpg)
