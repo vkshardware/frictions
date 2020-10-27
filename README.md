@@ -7,7 +7,10 @@ Used two electric actuators (Bringsmart 1500N 20mm/s 50mm or Sumotor 1000N 30mm/
 Tourning of ATV is controlled with switches or resistive joystick. 
 
 **Manual_EN rev1.1.pdf**  - English manual rev 1.1
+
 **manual_v2_2_RU.pdf**  -   Russian manual  rev 1.0
+
+
 
 
 ![Image alt](https://github.com/vkshardware/frictions/blob/master/main_view.jpg)
