@@ -116,7 +116,7 @@ volatile uint8_t i2c_reg_addr_;
 #define STATUS_BIT2_SQUEEZE 3        // Release both sides
 #define STATUS_BIT2_HOLD_ON_LOAD 4   // hold drive under load
 
-#define SCREENS 39
+#define SCREENS 40
 
 
 char actval[4] = "";
@@ -752,6 +752,9 @@ int main(void)
 			case 36 ... 39:    paramtodisp_addr = CurrScreen;
 						print_number_decimal(paramtodisp_addr, paramtodisp,!(Setup_param && blink_bus),0);
 						break;
+			case 40:    paramtodisp_addr = CurrScreen;
+			            print_number_decimal(paramtodisp_addr, paramtodisp,!(Setup_param && blink_bus),0);
+			            break;
 
 		}
 		if (Setup_param) { 

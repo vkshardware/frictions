@@ -235,6 +235,8 @@ uint8_t def_pulsemoving[4][4] = {{0,0,10,0},     //Hold on L drive on release *5
 								 {0,0,10,0},     //Hold on R drive on release *5%
 								 {10,1,10,0},    //Backward speed  *10%
 								 {4,1,10,0}};   //Watermode speed *10% 
+									 
+uint8_t def_logic_release[4] = {0,0,1,0}; //40 HAN logic release
 								   
 
 uint8_t EEMEM eeprom_wait_sec_down;
@@ -244,11 +246,13 @@ uint8_t EEMEM an_L_eeprom[10];
 uint8_t EEMEM an_R_eeprom[10];
 uint8_t EEMEM protection_eeprom[PROTECTIONS_COUNT];
 uint8_t EEMEM pulsemoving_eeprom[4];
+uint8_t EEMEM logic_release_eeprom;
 
 unsigned char  wait_sec_up, wait_sec_down, moving_up_stop = 0;
 uint8_t timer1_count = 0;
 uint8_t protection[PROTECTIONS_COUNT];
 uint8_t pulsemoving[4];
+uint8_t logic_release;
 
 bool control_L, control_R = false; // Control source (JOYSTICK/BUTTON)
 
@@ -638,6 +642,24 @@ void LoadEeprom(){
 		eeprom_write_block((void*)&pulsemoving,(void*)&pulsemoving, 4);
 		_delay_ms(5);
 	}
+
+	//reading  40 HAN specific logic on actuators release 
+	
+	logic_release = eeprom_read_byte(&logic_release_eeprom);
+	_delay_ms(5);
+	
+	tmp = 0;
+	if ((logic_release > def_logic_release[2]) || (logic_release < def_logic_release[1]))
+	{
+		tmp = 1;
+		logic_release = def_logic_release[0];
+	}
+	
+	if (tmp){
+		eeprom_write_byte(&logic_release_eeprom, logic_release);
+		_delay_ms(5);
+	}
+
 }
 
 void WriteEeprom(char paramfromdisp_addr)
@@ -658,7 +680,9 @@ void WriteEeprom(char paramfromdisp_addr)
 		case 30 ... 35: 	     eeprom_write_block((void*)&protection,(void*)&protection_eeprom, 6);
 	                         	 break;	
 		case 36 ... 39: 	     eeprom_write_block((void*)&pulsemoving,(void*)&pulsemoving_eeprom, 4);
-								 break;										 					 							 
+								 break;	
+	    case 40:				 eeprom_write_byte(&logic_release_eeprom, logic_release);
+	                             break;					 					 							 
 	}
 	
     sei();
@@ -1207,7 +1231,7 @@ int main(void)
 				sw_squeeze.off_trigger = false;
 			}
 			
-			if (in_left.outstate)  // Button L process
+			if (in_left.outstate && !(logic_release && in_right.outstate))  // Button L process
 			{
 				Left.control_source = true;
 				Left.goal_step = 4;				
@@ -1258,6 +1282,9 @@ int main(void)
 			Left.water_mode = sw_water.outstate;
 			Left.long_release = sw_squeeze.outstate;
 			
+			
+			
+			
 			if (sw_squeeze.outstate) {
 				
 				Left.control_source = true;
@@ -1281,7 +1308,7 @@ int main(void)
         if ((!val21.trip) && (!val22.trip) && (!oc_val21.trip) && (!oc_val22.trip))
         {
 			
-			if (in_right.outstate)  // Button R process
+			if (in_right.outstate && !(logic_release && in_left.outstate))  // Button R process
 			{
 				Right.control_source = true;
 				Right.goal_step = 4;				
@@ -1490,6 +1517,17 @@ int main(void)
 				}
 				break;
 				
+			   case 40: 
+			   if (paramfromdisp != logic_release)
+			   {
+				  	if ((logic_release <= def_logic_release[2]) ||
+				  	(logic_release >= def_logic_release[1]))
+				  	{
+					  	logic_release = paramfromdisp;
+					  	WriteEeprom(paramfromdisp_addr);
+				  	}
+			   }
+				
 				default: paramfromdisp = 0;
 			}
 			
@@ -1531,7 +1569,9 @@ int main(void)
 				case 30 ... 35: paramtodisp = protection[paramtodisp_addr-30];	
 				          break;
 			    case 36 ... 39: paramtodisp = pulsemoving[paramtodisp_addr-36];
-					      break;						  
+					      break;	
+				case 40: 	    paramtodisp = logic_release;
+				          break;	  					  
 			    default:   paramtodisp = 0;
 			}
 			
