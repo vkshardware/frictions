@@ -1,19 +1,21 @@
 /*
  * friction.cpp
+ * v2.5.2. Friction Clutch Controller
  *
  * Created: 19/01/2021 
  * Author : vks
  */ 
 
-#define F_CPU                  16000000UL
-
 #include <avr/io.h>
-#include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
 
 #include "twi.h"
+#include "mcp2515.h"
 
+
+//#define F_CPU                  16000000UL
+#include <util/delay.h>
 
 /*
 
@@ -52,8 +54,8 @@ PCBs v3.0 & Module v4.0
 #define WAIT_5Hz 20
 #define WAIT_1Hz 100
 
-#define DEF_WAIT_SEC_UP 9   //forward moving default time х100мс
-#define DEF_WAIT_SEC_DOWN 20 //backward moving default time х100мс
+#define DEF_WAIT_SEC_UP 9   //forward moving default time
+#define DEF_WAIT_SEC_DOWN 20 //backward moving default time
 #define DEF_MOVING_UP_STOP 10 //
 
 #define ADDR_WAIT_SEC_UP	 0x01
@@ -237,6 +239,10 @@ uint8_t def_pulsemoving[4][4] = {{0,0,10,0},     //Hold on L drive on release *5
 								 {4,1,10,0}};   //Watermode speed *10% 
 									 
 uint8_t def_logic_release[4] = {0,0,1,0}; //40 HAN logic release
+	
+													//41-42 CAN BUS parameters
+uint8_t def_can_bus[2][4] = {{4,0,6,0},				//CAN BUS baudrate 4 = 125kbps
+	                         {0x11,0x01,0xFE,0}};	//CAN BUS address
 								   
 
 uint8_t EEMEM eeprom_wait_sec_down;
@@ -247,12 +253,14 @@ uint8_t EEMEM an_R_eeprom[10];
 uint8_t EEMEM protection_eeprom[PROTECTIONS_COUNT];
 uint8_t EEMEM pulsemoving_eeprom[4];
 uint8_t EEMEM logic_release_eeprom;
+uint8_t EEMEM can_bus_eeprom[2];
 
 unsigned char  wait_sec_up, wait_sec_down, moving_up_stop = 0;
 uint8_t timer1_count = 0;
 uint8_t protection[PROTECTIONS_COUNT];
 uint8_t pulsemoving[4];
 uint8_t logic_release;
+uint8_t can_bus[2];
 
 bool control_L, control_R = false; // Control source (JOYSTICK/BUTTON)
 
@@ -639,7 +647,7 @@ void LoadEeprom(){
 	}
 	
 	if (tmp){
-		eeprom_write_block((void*)&pulsemoving,(void*)&pulsemoving, 4);
+		eeprom_write_block((void*)&pulsemoving,(void*)&pulsemoving_eeprom, 4);
 		_delay_ms(5);
 	}
 
@@ -658,6 +666,24 @@ void LoadEeprom(){
 	if (tmp){
 		eeprom_write_byte(&logic_release_eeprom, logic_release);
 		_delay_ms(5);
+	}
+	
+	
+	//CAN BUS parameters
+	eeprom_read_block((void*)&can_bus, (const void*)can_bus_eeprom,2);
+	_delay_ms(5);
+		
+	tmp = 0;
+	for (i = 0; i <=1; i++)
+	if ((can_bus[i] > def_can_bus[i][2]) || (can_bus[i] < def_can_bus[i][1]))
+	{
+			tmp = 1;
+			can_bus[i] = def_can_bus[i][0];
+	}
+		
+	if (tmp){
+			eeprom_write_block((void*)&can_bus,(void*)&can_bus_eeprom, 2);
+			_delay_ms(5);
 	}
 
 }
@@ -682,7 +708,9 @@ void WriteEeprom(char paramfromdisp_addr)
 		case 36 ... 39: 	     eeprom_write_block((void*)&pulsemoving,(void*)&pulsemoving_eeprom, 4);
 								 break;	
 	    case 40:				 eeprom_write_byte(&logic_release_eeprom, logic_release);
-	                             break;					 					 							 
+	                             break;					
+	    case 41 ... 42:		     eeprom_write_block((void*)&can_bus,(void*)&can_bus_eeprom, 2);
+								 break; 					 							 
 	}
 	
     sei();
@@ -1178,14 +1206,34 @@ void init_channels()
 	Right.timer_pwm_hold_on = 10;
 }
 
+bool CheckLimitsArray(uint8_t source, uint8_t defs[4])
+{
+	bool result = false;
+	
+	if ((source <= defs[2]) && (source >= defs[1])) result = true;
+						
+   return result;
+}
+
+/*
+
+ISR(PCINT1_vect) 
+{
+	interruptMCP2515();
+} */
+
+
 int main(void)
 {	 
 	uint8_t step = 0;
 	bool sq_off_left, sq_off_right = false;
-	
+	unsigned char data[8];
+
     DDRA = ON_L1 | ON_L2;
 	
 	DDRB = ON_R1 | ON_R2 | RESERVE1; 
+	
+	DDRC = nCS;
 		
     WDTCSR |= (1<<WDCE) | (1<<WDE);
     WDTCSR = (1<<WDE) | (1<<WDP2) | (1<<WDP1);	
@@ -1197,17 +1245,22 @@ int main(void)
 	TCCR1A = 0;
 	TCCR1B = (1 << CS11)|(1 << CS10); //64 divider
     TCNT1 = WAIT_100HZ;	
+	
+	//PCICR |= (1 << PCIE1); 
+	//PCMSK1 |= (1 << PCINT12);
 
-	
-	sei();
-	
-	
 	LoadEeprom();
+	
+	if (can_bus[0] > 0)
+	  initMCP2515((uint8_t)(can_bus[0] - 1));
+	 
+	sei();
     init_switches();
 	init_channels();
 	init_protections();
 	ADC_Init();
 	twi_init();
+	
 
 	TIFR0 = (1<<TOV0);
 	TIMSK0 = (1<<TOIE0);
@@ -1289,6 +1342,7 @@ int main(void)
 				
 				Left.control_source = true;
 				Left.goal_step = 4;
+
 			}
 			
             if (sq_off_left){
@@ -1395,7 +1449,7 @@ int main(void)
 		}
 		
 	    
-		ledL_on_down = Left.moving_bwd;
+		ledL_on_down = Left.moving_bwd; 
      	ledL_on_up = Left.moving_fwd;
 		ledR_on_down = Right.moving_bwd;
 		ledR_on_up = Right.moving_fwd;
@@ -1441,9 +1495,7 @@ int main(void)
 			paramtodisp_addr =   TWI_DataBuff[1];
 			paramfromdisp =      TWI_DataBuff[2];
 			paramfromdisp_addr = TWI_DataBuff[3];
-			
-			
-			
+					
 			switch (paramfromdisp_addr)
 			{
 				case ADDR_WAIT_SEC_UP: if (paramfromdisp != wait_sec_up)
@@ -1471,7 +1523,7 @@ int main(void)
 				case 10 ... 19:
 				if (paramfromdisp != an_L.steps[paramfromdisp_addr-10])		
 				{
-					if ((paramfromdisp < 100) || (paramfromdisp > 0))
+					if ((paramfromdisp < 100) && (paramfromdisp > 0))
 					{
 						an_L.steps[paramfromdisp_addr-10] = paramfromdisp;
 						WriteEeprom(paramfromdisp_addr);
@@ -1482,7 +1534,7 @@ int main(void)
 				case 20 ... 29:
 				if (paramfromdisp != an_R.steps[paramfromdisp_addr-20])		
 				{
-					if ((paramfromdisp < 100) || (paramfromdisp > 0))
+					if ((paramfromdisp < 100) && (paramfromdisp > 0))
 					{
 						an_R.steps[paramfromdisp_addr-20] = paramfromdisp;
 						WriteEeprom(paramfromdisp_addr);
@@ -1493,8 +1545,7 @@ int main(void)
 				case 30 ... 35:
 				if (paramfromdisp != protection[paramfromdisp_addr-30])
 				{
-				  	if ((protection[paramfromdisp_addr-30] <= def_protection[paramfromdisp_addr-30][2]) || 
-					    (protection[paramfromdisp_addr-30] >= def_protection[paramfromdisp_addr-30][1]))
+				  	if (CheckLimitsArray(paramfromdisp, def_protection[paramfromdisp_addr-30]))
 				  	{
 				        protection[paramfromdisp_addr-30] = paramfromdisp;
 						WriteEeprom(paramfromdisp_addr);
@@ -1507,8 +1558,7 @@ int main(void)
 				case 36 ... 39:
 				if (paramfromdisp != pulsemoving[paramfromdisp_addr-36])
 				{
-				  	if ((pulsemoving[paramfromdisp_addr-36] <= def_pulsemoving[paramfromdisp_addr-36][2]) || 
-					    (pulsemoving[paramfromdisp_addr-36] >= def_pulsemoving[paramfromdisp_addr-36][1]))
+				  	if (CheckLimitsArray(paramfromdisp, def_pulsemoving[paramfromdisp_addr-36]))
 				  	{
 				        pulsemoving[paramfromdisp_addr-36] = paramfromdisp;
 						WriteEeprom(paramfromdisp_addr);
@@ -1520,21 +1570,44 @@ int main(void)
 			   case 40: 
 			   if (paramfromdisp != logic_release)
 			   {
-				  	if ((logic_release <= def_logic_release[2]) ||
-				  	(logic_release >= def_logic_release[1]))
+				  	if (CheckLimitsArray(paramfromdisp, def_logic_release))
 				  	{
 					  	logic_release = paramfromdisp;
 					  	WriteEeprom(paramfromdisp_addr);
 				  	}
 			   }
+			   break;
+			   
+			   case  41 ... 42:
+			   if (paramfromdisp != can_bus[paramfromdisp_addr-41])
+			   {
+                    if (CheckLimitsArray(paramfromdisp, def_can_bus[paramfromdisp_addr-41]))
+				   	{
+					     can_bus[paramfromdisp_addr-41] = paramfromdisp;
+					   	 WriteEeprom(paramfromdisp_addr);
+				   	}
+			   }
+			   
+			   break;
 				
-				default: paramfromdisp = 0;
+			   default: paramfromdisp = 0;
 			}
 			
 		}
 		
 		if (twi_process_write)
 		{
+			data[0] = statebyte0;
+			data[1] = statebyte1;
+			data[2] = statebyte2;
+			data[3] = 0x00;
+			data[4] = 0x00;
+			data[5] = 0x00;
+			data[6] = 0x00;
+			data[7] = 0x00;	
+			
+			if (can_bus[0] > 0)					
+			   sendCANmsg(0, can_bus[1], data, 8);
 
 			TWI_DataAddr = 0x01;
 			TWI_DataSize  = 4;
@@ -1544,23 +1617,23 @@ int main(void)
 			
 			switch (paramtodisp_addr)
 			{
-				case ADDR_WAIT_SEC_UP: paramtodisp = wait_sec_up;
+				case 1: paramtodisp = wait_sec_up;
 				           break;
-			    case ADDR_WAIT_SEC_DOWN: paramtodisp = wait_sec_down;
+			    case 2: paramtodisp = wait_sec_down;
 			               break;
-			    case ADDR_MOVING_UP_STOP: paramtodisp = moving_up_stop;
+			    case 3: paramtodisp = moving_up_stop;
 			               break;
-				case ADDR_PERSENTAGE_L: paramtodisp = val_L;
+				case 4: paramtodisp = val_L;
 						  break;
-			    case ADDR_CMD_L: paramtodisp = Left.goal_step*10+Left.curr_step;
+			    case 5: paramtodisp = Left.goal_step*10+Left.curr_step;
 				          break;
-				case ADDR_ENABLE_L: paramtodisp = an_L.enabled;		 
+				case 6: paramtodisp = an_L.enabled;		 
 					      break;
-				case ADDR_PERSENTAGE_R: paramtodisp =val_R;
+				case 7: paramtodisp =val_R;
 						  break;
-				case ADDR_CMD_R: paramtodisp = Right.goal_step*10+Right.curr_step;
+				case 8: paramtodisp = Right.goal_step*10+Right.curr_step;
 				          break;
-				case ADDR_ENABLE_R: paramtodisp = an_R.enabled;  
+				case 9: paramtodisp = an_R.enabled;  
 				          break;	
 				case 10 ... 19: paramtodisp = an_L.steps[paramtodisp_addr-10];	
 				          break;
@@ -1571,7 +1644,11 @@ int main(void)
 			    case 36 ... 39: paramtodisp = pulsemoving[paramtodisp_addr-36];
 					      break;	
 				case 40: 	    paramtodisp = logic_release;
-				          break;	  					  
+				          break;	
+				case 41 ... 42: 			
+								paramtodisp = can_bus[paramtodisp_addr - 41];
+						  break;  				
+				
 			    default:   paramtodisp = 0;
 			}
 			

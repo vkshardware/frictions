@@ -116,10 +116,10 @@ volatile uint8_t i2c_reg_addr_;
 #define STATUS_BIT2_SQUEEZE 3        // Release both sides
 #define STATUS_BIT2_HOLD_ON_LOAD 4   // hold drive under load
 
-#define SCREENS 40
+#define SCREENS 42
 
 
-char actval[4] = "";
+uint8_t actval[4];
 
 unsigned char Key1_lock,Key2_lock, Key2_lock_long, CurrScreen = 0;
 unsigned char statusbyte0, statusbyte1, statusbyte2, paramtodisp, paramtodisp_addr, paramfromdisp, paramfromdisp_addr = 0;
@@ -364,6 +364,52 @@ void setseg(uint8_t seg)
 	}
 } 
 
+
+void setseg_hex(uint8_t seg)
+{
+	//clear segment
+	
+	PORTD = 0xFF;
+	
+	switch(seg)
+	{
+		
+		case 0:  PORTD &= ~(SEG_F | SEG_E | SEG_D | SEG_C | SEG_B | SEG_A);			//print 0
+		break;
+		case 1:  PORTD &= ~(SEG_B | SEG_C);											//print 1
+		break;
+		case 2:  PORTD &= ~(SEG_A | SEG_B | SEG_G | SEG_E | SEG_D);					//print 2
+		break;
+		case 3:  PORTD &= ~(SEG_A | SEG_B | SEG_G | SEG_C | SEG_D);					//print 3
+		break;
+		case 4:  PORTD &= ~(SEG_F | SEG_G | SEG_B | SEG_C);							//print 4
+		break;
+		case 5:  PORTD &= ~(SEG_A | SEG_F | SEG_G | SEG_C | SEG_D);					//print 5
+		break;
+		case 6:  PORTD &= ~(SEG_A | SEG_F | SEG_G | SEG_E | SEG_D | SEG_C);			//print 6
+		break;
+		case 7:  PORTD &= ~(SEG_A | SEG_B | SEG_C);									//print 7
+		break;
+		case 8:  PORTD &= ~(SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F | SEG_G); //print 8
+		break;
+		case 9:  PORTD &= ~(SEG_A | SEG_B | SEG_C | SEG_D | SEG_F | SEG_G);			//print 9
+		break;
+		case 10: PORTD &= ~(SEG_A | SEG_B | SEG_C | SEG_E | SEG_F | SEG_G);			//print A
+		break;
+		case 11:  PORTD &= ~(SEG_F | SEG_E | SEG_D | SEG_C | SEG_G);				//print b
+		break;
+		case 12:  PORTD &= ~(SEG_A | SEG_F | SEG_E | SEG_D);						//print C
+		break;
+		case 13:  PORTD &= ~(SEG_G | SEG_E | SEG_D | SEG_C | SEG_B);				//print d
+		break;
+		case 14: PORTD &= ~(SEG_A | SEG_F | SEG_E | SEG_D | SEG_G);					//print E
+		break;
+		case 15: PORTD &= ~(SEG_A | SEG_F | SEG_E | SEG_G);							//print F
+		break;
+	
+	}
+}
+
 void selectseg(unsigned char selseg)
 {
 	//clear 7seg led anodes
@@ -484,6 +530,46 @@ void print_number_decimal(unsigned char number, unsigned int val, bool setup, un
 	}
 }
 
+void print_number_hex(uint8_t number, uint16_t val, bool setup){
+	unsigned char i,n = 0;
+	
+	selectseg(1);
+	if (number < 10){
+		setseg(number);
+		PORTD &= ~(SEG_DP);
+	} else
+	{
+		setseg(number / 10);
+		_delay_ms(UPDATE_DISPLAY);
+		selectseg(2);
+		setseg(number % 10);
+		PORTD &= ~(SEG_DP);
+	}
+	
+	_delay_ms(UPDATE_DISPLAY);
+	
+	
+	actval[2] = val % 0x10;
+	actval[1] = (val/=0x10) % 0x10;
+	
+	n = 2;
+
+	
+
+	if (setup)
+	{
+		for(i=n+1;i<=4;i++)  {
+			selectseg(i);
+			setseg_hex(actval[i-2]);
+
+			PORTD |= (SEG_DP);
+			
+			
+			_delay_ms(UPDATE_DISPLAY);
+		}
+	}
+}
+
 void print_statusbyte(unsigned char _statusbyte0, unsigned char _statusbyte1, unsigned char _statusbyte2)
 {
 	
@@ -543,7 +629,7 @@ void print_statusbyte(unsigned char _statusbyte0, unsigned char _statusbyte1, un
 				
 		selectseg(4);
 		
-		if (_statusbyte2 & (1 << STATUS_BIT1_R_TRIP_STAGE1))
+		if (_statusbyte1 & (1 << STATUS_BIT1_R_TRIP_STAGE1))
 	    	setseg(1); //F1
 		else
 		    setseg(2); //F2
@@ -754,7 +840,10 @@ int main(void)
 						break;
 			case 40:    paramtodisp_addr = CurrScreen;
 			            print_number_decimal(paramtodisp_addr, paramtodisp,!(Setup_param && blink_bus),0);
-			            break;
+			            break;	
+			case 41 ... 42:    paramtodisp_addr = CurrScreen;
+						print_number_hex(paramtodisp_addr, paramtodisp,!(Setup_param && blink_bus));
+						break;
 
 		}
 		if (Setup_param) { 

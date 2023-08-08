@@ -4,5 +4,9 @@
 
 main.cpp
 
+mcp2515.cpp
+
+spi.cpp
+
 twi.cpp
 

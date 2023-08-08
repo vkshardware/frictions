@@ -1,0 +1,30 @@
+DISPLAY I2C COMMUNICATION;;;;
+;;;;
+SIGNAL ;Byte;Bit number;;Comment
+;;;;
+status byte 0;;;;
+STATUS_BIT0_L_ON;0;0;;
+STATUS_BIT0_R_ON;0;1;;
+STATUS_BIT0_L_D;0;2;;
+STATUS_BIT0_L_U;0;3;;
+STATUS_BIT0_R_D;0;4;;
+STATUS_BIT0_R_U;0;5;;
+STATUS_BIT0_L_BUT;0;6;;
+STATUS_BIT0_R_BUT;0;7;;
+;;;;
+status byte 1;;;;
+STATUS_BIT1_L_EN   0;1;0;;
+STATUS_BIT1_R_EN   1;1;1;;
+STATUS_BIT1_L_ON_U 2;1;2;;
+STATUS_BIT1_L_ON_D 3;1;3;;
+STATUS_BIT1_R_ON_U 4;1;4;;
+STATUS_BIT1_R_ON_D 5;1;5;;
+STATUS_BIT1_L_TRIP_STAGE1;1;6;;L TRIP current protection jamming
+STATUS_BIT1_R_TRIP_STAGE1;1;7;;R TRIP current protection jamming
+;;;;
+status byte 2;;;;
+STATUS_BIT2_L_TRIP_STAGE2;2;0;;L TRIP over current protection short circuit
+STATUS_BIT2_R_TRIP_STAGE2;2;1;;R TRIP over current protection short circuit
+STATUS_BIT2_WATERMODE;2;2;;Water mode
+STATUS_BIT2_SQUEEZE ;2;3;;Release both sides
+STATUS_BIT2_HOLD_ON_LOAD;2;4;;hold drive under load
