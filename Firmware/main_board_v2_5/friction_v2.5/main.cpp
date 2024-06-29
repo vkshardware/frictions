@@ -21,7 +21,7 @@
 
 GAZ-71 Frictions control board v3.0 & v4.0
 
-Firmware v2.5.
+Firmware v2.6
 PCBs v3.0 & Module v4.0
 
 
