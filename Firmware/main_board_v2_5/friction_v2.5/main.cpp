@@ -81,6 +81,7 @@ PCBs v3.0 & Module v4.0
 #define  PROTECTIONS_COUNT 6
 
 #define SQUELCH 5; // CURRENT OFF protection: reject noise if PWM on
+#define SQUELCH_MAIN_MODE 5
 
 //status byte 0
 #define STATUS_BIT0_L_ON 0
@@ -1073,7 +1074,7 @@ ISR (ADC_vect)
 					oc_val22.time_rate = SQUELCH; 
 				}	
 				else
-					oc_val22.time_rate = 0;
+					oc_val22.time_rate = SQUELCH_MAIN_MODE;
 				
 				 CurrentProtection(&oc_val22); //Fast short circuit
 				  if (oc_val22.trip)
@@ -1092,7 +1093,7 @@ ISR (ADC_vect)
 					{
 						  oc_val21.time_rate = SQUELCH; 
 					} else
-						  oc_val21.time_rate = 0;
+						  oc_val21.time_rate = SQUELCH_MAIN_MODE;
 					
 					CurrentProtection(&oc_val21); //Fast short circuit
 					if (oc_val21.trip)
